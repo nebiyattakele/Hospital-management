@@ -6,9 +6,19 @@ const userSchema = new mongoose.Schema({
   email: { type: String, required: true, unique: true },
   password: { type: String, required: true },
   role: { type: String, enum: ['Admin', 'Patient', 'Doctor'], default: 'Patient' },
+  // Patient specific fields
+  profilePicture: { type: String },
+  age: { type: Number },
+  gender: { type: String, enum: ['Male', 'Female', 'Other'] },
+  address: { type: String },
   // Doctor specific fields
   specialty: { type: String },
-  contactNumber: { type: String }
+  contactNumber: { type: String },
+  availability: [{
+    day: { type: String }, // e.g., 'Monday'
+    slots: [{ type: String }] // e.g., ['09:00', '10:00']
+  }],
+  rating: { type: Number, default: 0 }
 }, { timestamps: true });
 
 userSchema.pre('save', async function(next) {

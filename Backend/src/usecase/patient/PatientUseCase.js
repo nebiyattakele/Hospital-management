@@ -24,7 +24,8 @@ class PatientUseCase {
         name: user.name,
         email: user.email,
         role: user.role,
-        token: jwtService.generateToken(user._id)
+        accessToken: jwtService.generateAccessToken(user._id),
+        refreshToken: jwtService.generateRefreshToken(user._id)
       };
     } else {
       throw new Error('Invalid user data');
@@ -64,8 +65,10 @@ class PatientUseCase {
       name: updatedUser.name,
       email: updatedUser.email,
       role: updatedUser.role,
-      token: jwtService.generateToken(updatedUser._id)
+      accessToken: jwtService.generateAccessToken(updatedUser._id),
+      refreshToken: jwtService.generateRefreshToken(updatedUser._id)
     };
+
   }
 }
 

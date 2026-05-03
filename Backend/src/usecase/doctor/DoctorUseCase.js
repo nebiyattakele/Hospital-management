@@ -34,8 +34,10 @@ class DoctorUseCase {
       email: updatedUser.email,
       role: updatedUser.role,
       specialty: updatedUser.specialty,
-      token: jwtService.generateToken(updatedUser._id)
+      accessToken: jwtService.generateAccessToken(updatedUser._id),
+      refreshToken: jwtService.generateRefreshToken(updatedUser._id)
     };
+
   }
 
   async getAllDoctors() {

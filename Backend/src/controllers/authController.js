@@ -100,5 +100,19 @@ const resetPassword = async (req, res) => {
   }
 };
 
-module.exports = { registerUser, loginUser, getProfile, updateProfile, forgotPassword, resetPassword };
+// @desc    Refresh token
+// @route   POST /api/auth/refresh
+// @access  Public
+const refreshToken = async (req, res) => {
+  const { refreshToken } = req.body;
+  try {
+    const result = await authUseCase.refreshToken(refreshToken);
+    res.json(result);
+  } catch (error) {
+    res.status(401).json({ message: error.message });
+  }
+};
+
+module.exports = { registerUser, loginUser, getProfile, updateProfile, forgotPassword, resetPassword, refreshToken };
+
 

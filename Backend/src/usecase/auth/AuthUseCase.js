@@ -12,12 +12,31 @@ class AuthUseCase {
         name: user.name,
         email: user.email,
         role: user.role,
-        token: jwtService.generateToken(user._id)
+        accessToken: jwtService.generateAccessToken(user._id),
+        refreshToken: jwtService.generateRefreshToken(user._id)
       };
     } else {
       throw new Error('Invalid email or password');
     }
   }
+
+  async refreshToken(token) {
+    const decoded = jwtService.verifyRefreshToken(token);
+    if (!decoded) {
+      throw new Error('Invalid or expired refresh token');
+    }
+
+    const user = await userRepository.findById(decoded.id);
+    if (!user) {
+      throw new Error('User not found');
+    }
+
+    return {
+      accessToken: jwtService.generateAccessToken(user._id),
+      refreshToken: jwtService.generateRefreshToken(user._id)
+    };
+  }
+
 
   async forgotPassword(email) {
     const user = await userRepository.findByEmail(email);

@@ -1,0 +1,30 @@
+services:
+  app:
+    build: .
+    ports:
+      - "5001:5001"
+    environment:
+      - PORT=5001
+
+      - MONGODB_URI=mongodb://db:27017/hospital-appointments
+      - JWT_SECRET=yoursecretkey123
+    depends_on:
+      - db
+    networks:
+      - backend-network
+
+  db:
+    image: mongo:latest
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongo-data:/data/db
+    networks:
+      - backend-network
+
+networks:
+  backend-network:
+    driver: bridge
+
+volumes:
+  mongo-data:

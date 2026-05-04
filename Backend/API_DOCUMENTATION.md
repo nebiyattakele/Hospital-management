@@ -18,7 +18,7 @@ Base URL: `http://localhost:5000/api`
       "password": "password123"
     }
     ```
-*   **Response (201 Created):** Returns user details along with a JWT Token.
+*   **Response (201 Created):** Returns user details along with `accessToken` and `refreshToken`.
 
 ### Login User
 *   **Endpoint:** `POST /auth/login`
@@ -31,7 +31,70 @@ Base URL: `http://localhost:5000/api`
       "password": "password123"
     }
     ```
-*   **Response (200 OK):** Returns user details and `token`.
+*   **Response (200 OK):**
+    ```json
+    {
+      "_id": "60d0fe4f5311236168a109ca",
+      "name": "John Doe",
+      "email": "john@example.com",
+      "role": "Patient",
+      "accessToken": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
+      "refreshToken": "defGhijkLmnoPqrstUvwxYz123456..."
+    }
+    ```
+
+### Refresh Token
+*   **Endpoint:** `POST /auth/refresh`
+*   **Access:** Public
+*   **Description:** Generates a new `accessToken` using a valid `refreshToken`.
+*   **Body Request (JSON):**
+    ```json
+    {
+      "refreshToken": "your-refresh-token-here"
+    }
+    ```
+*   **Response (200 OK):**
+    ```json
+    {
+      "accessToken": "new-access-token",
+      "refreshToken": "new-refresh-token"
+    }
+    ```
+
+### Forgot Password
+*   **Endpoint:** `POST /auth/forgot-password`
+*   **Access:** Public
+*   **Description:** Sends a password reset link to the user's email.
+*   **Body Request (JSON):**
+    ```json
+    {
+      "email": "john@example.com"
+    }
+    ```
+*   **Response (200 OK):**
+    ```json
+    {
+      "message": "Password reset link sent to your email"
+    }
+    ```
+
+### Reset Password
+*   **Endpoint:** `POST /auth/reset-password`
+*   **Access:** Public
+*   **Description:** Resets the user's password using the provided email and new password.
+*   **Body Request (JSON):**
+    ```json
+    {
+      "email": "john@example.com",
+      "newPassword": "newpassword123"
+    }
+    ```
+*   **Response (200 OK):**
+    ```json
+    {
+      "message": "Password reset successfully"
+    }
+    ```
 
 ---
 

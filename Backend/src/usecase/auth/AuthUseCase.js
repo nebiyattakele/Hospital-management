@@ -62,6 +62,31 @@ class AuthUseCase {
 
     return { message: 'Password reset successfully' };
   }
+
+  async changePassword(userId, currentPassword, newPassword) {
+    if (!currentPassword || !newPassword) {
+      throw new Error('Current password and new password are required');
+    }
+
+    if (currentPassword === newPassword) {
+      throw new Error('New password must be different from current password');
+    }
+
+    const user = await userRepository.findById(userId);
+    if (!user) {
+      throw new Error('User not found');
+    }
+
+    const isCurrentPasswordValid = await user.matchPassword(currentPassword);
+    if (!isCurrentPasswordValid) {
+      throw new Error('Current password is incorrect');
+    }
+
+    user.password = newPassword;
+    await userRepository.save(user);
+
+    return { message: 'Password changed successfully' };
+  }
 }
 
 module.exports = new AuthUseCase();

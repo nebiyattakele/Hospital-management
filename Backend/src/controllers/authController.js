@@ -113,6 +113,28 @@ const refreshToken = async (req, res) => {
   }
 };
 
-module.exports = { registerUser, loginUser, getProfile, updateProfile, forgotPassword, resetPassword, refreshToken };
+// @desc    Change password for logged-in user
+// @route   POST /api/auth/change-password
+// @access  Private
+const changePassword = async (req, res) => {
+  const { currentPassword, newPassword } = req.body;
+  try {
+    const result = await authUseCase.changePassword(req.user._id, currentPassword, newPassword);
+    res.json(result);
+  } catch (error) {
+    res.status(400).json({ message: error.message });
+  }
+};
+
+module.exports = {
+  registerUser,
+  loginUser,
+  getProfile,
+  updateProfile,
+  forgotPassword,
+  resetPassword,
+  refreshToken,
+  changePassword
+};
 
 

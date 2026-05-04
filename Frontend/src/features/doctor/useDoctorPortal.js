@@ -7,6 +7,7 @@ import {
   updateAppointmentStatus,
   updateDoctorProfile,
 } from "../../api/doctorApi";
+import { changePasswordRequest } from "../../api/authApi";
 import { resolveEntityId, toArray, unwrapApiPayload } from "../../utils/dataAdapters";
 
 export const STATUS_TO_STYLE = {
@@ -211,8 +212,10 @@ function useDoctorPortal() {
     }
   };
 
-  const handlePasswordSubmit = (event) => {
+  const handlePasswordSubmit = async (event) => {
     event.preventDefault();
+    setFormError("");
+    setMessage("");
 
     if (!passwordForm.currentPassword || !passwordForm.newPassword) {
       setFormError("Please fill all password fields.");
@@ -224,9 +227,21 @@ function useDoctorPortal() {
       return;
     }
 
-    setFormError(
-      "Password API is not connected yet. Wire this to your auth password endpoint."
-    );
+    try {
+      const result = await changePasswordRequest({
+        currentPassword: passwordForm.currentPassword,
+        newPassword: passwordForm.newPassword,
+      });
+      setMessage(result?.message || "Password changed successfully.");
+      setPasswordForm({
+        currentPassword: "",
+        newPassword: "",
+        confirmPassword: "",
+      });
+      setShowChangePassword(false);
+    } catch (error) {
+      setFormError(error.message || "Failed to change password.");
+    }
   };
 
   const handleStatusUpdate = async (id, status) => {

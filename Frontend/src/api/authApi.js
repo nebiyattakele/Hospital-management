@@ -52,4 +52,15 @@ async function getProfileRequest(token) {
   return payload?.user || payload;
 }
 
-export { getProfileRequest, loginRequest, refreshTokenRequest, registerRequest };
+async function changePasswordRequest(payload) {
+  const response = await apiClient.post("/auth/change-password", payload);
+  return response?.data || response;
+}
+
+export {
+  changePasswordRequest,
+  getProfileRequest,
+  loginRequest,
+  refreshTokenRequest,
+  registerRequest,
+};

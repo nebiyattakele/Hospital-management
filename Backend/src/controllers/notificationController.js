@@ -1,12 +1,11 @@
-const Notification = require('../domain/Notification');
+const notificationRepository = require('../repository/NotificationRepository');
 
 // @desc    Get user notifications
 // @route   GET /api/notifications
 // @access  Private
 const getNotifications = async (req, res) => {
   try {
-    const notifications = await Notification.find({ recipientId: req.user._id })
-      .sort({ createdAt: -1 });
+    const notifications = await notificationRepository.findByRecipientId(req.user._id);
     res.json(notifications);
   } catch (error) {
     res.status(500).json({ message: error.message });
@@ -18,10 +17,8 @@ const getNotifications = async (req, res) => {
 // @access  Private
 const markAsRead = async (req, res) => {
   try {
-    const notification = await Notification.findById(req.params.id);
-    if (notification && notification.recipientId.toString() === req.user._id.toString()) {
-      notification.isRead = true;
-      await notification.save();
+    const updated = await notificationRepository.markAsRead(req.params.id);
+    if (updated) {
       res.json({ message: 'Notification marked as read' });
     } else {
       res.status(404).json({ message: 'Notification not found' });
@@ -32,3 +29,4 @@ const markAsRead = async (req, res) => {
 };
 
 module.exports = { getNotifications, markAsRead };
+

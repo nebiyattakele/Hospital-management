@@ -1,6 +1,6 @@
 require('dotenv').config();
 const mongoose = require('mongoose');
-const User = require('./src/domain/User');
+const User = require('./src/domain/user');
 
 const seedAdmin = async () => {
   try {

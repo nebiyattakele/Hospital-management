@@ -1,6 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const {
+  getAvailableSlots,
   bookAppointment,
   getAppointments,
   cancelAppointment,
@@ -8,6 +9,10 @@ const {
   rescheduleAppointment
 } = require('../controllers/appointmentController');
 const { protect, doctor, patient } = require('../middlewares/authMiddleware');
+
+const patientAvailableSlots = [protect, patient, getAvailableSlots];
+router.get('/slots', patientAvailableSlots);
+router.get('/available-slots', patientAvailableSlots);
 
 router.route('/')
   .post(protect, patient, bookAppointment)

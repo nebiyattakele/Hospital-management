@@ -15,6 +15,7 @@ function PatientAppointmentsPage() {
     notifications,
     openRescheduleModal,
     rescheduleForm,
+    rescheduleSlotsMeta,
     setAppointmentFilter,
     setRescheduleForm,
     setShowRescheduleModal,
@@ -156,22 +157,55 @@ function PatientAppointmentsPage() {
                     value={rescheduleForm.date}
                   />
                 </label>
-                <label>
-                  New Time
-                  <input
-                    onChange={(event) =>
-                      setRescheduleForm((prev) => ({ ...prev, time: event.target.value }))
-                    }
-                    required
-                    type="time"
-                    value={rescheduleForm.time}
-                  />
-                </label>
+                <div>
+                  <label>
+                    Available time slots
+                    {rescheduleSlotsMeta.loading ? (
+                      <span className="subtle-text"> — Loading…</span>
+                    ) : null}
+                  </label>
+                  {rescheduleSlotsMeta.error ? (
+                    <p className="error-text">{rescheduleSlotsMeta.error}</p>
+                  ) : null}
+                  {!rescheduleSlotsMeta.loading &&
+                  !rescheduleSlotsMeta.configuredForDay &&
+                  !rescheduleSlotsMeta.error ? (
+                    <p className="subtle-text">
+                      This doctor has no hours configured for this weekday. Pick another date.
+                    </p>
+                  ) : null}
+                  {!rescheduleSlotsMeta.loading &&
+                  rescheduleSlotsMeta.configuredForDay &&
+                  !rescheduleSlotsMeta.slots.length &&
+                  !rescheduleSlotsMeta.error ? (
+                    <p className="subtle-text">No open slots on this date.</p>
+                  ) : null}
+                  <div className="slot-grid">
+                    {rescheduleSlotsMeta.slots.map((slot) => (
+                      <button
+                        className={rescheduleForm.time === slot ? "active" : ""}
+                        key={slot}
+                        onClick={() => setRescheduleForm((prev) => ({ ...prev, time: slot }))}
+                        type="button"
+                      >
+                        {slot}
+                      </button>
+                    ))}
+                  </div>
+                </div>
                 <div className="button-row">
                   <button className="btn-secondary" onClick={() => setShowRescheduleModal(false)} type="button">
                     Cancel
                   </button>
-                  <button className="btn-primary" type="submit">
+                  <button
+                    className="btn-primary"
+                    disabled={
+                      rescheduleSlotsMeta.loading ||
+                      !rescheduleForm.time ||
+                      !rescheduleSlotsMeta.slots.includes(rescheduleForm.time)
+                    }
+                    type="submit"
+                  >
                     Save Changes
                   </button>
                 </div>

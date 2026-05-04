@@ -15,8 +15,12 @@ const userSchema = new mongoose.Schema({
   specialty: { type: String },
   contactNumber: { type: String },
   availability: [{
-    day: { type: String }, // e.g., 'Monday'
-    slots: [{ type: String }] // e.g., ['09:00', '10:00']
+    day: { type: String },
+    slots: [{ type: String }],
+    ranges: [{
+      start: { type: String },
+      end: { type: String }
+    }]
   }],
   rating: { type: Number, default: 0 }
 }, { timestamps: true });

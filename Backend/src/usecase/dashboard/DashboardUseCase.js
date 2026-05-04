@@ -66,7 +66,7 @@ class DashboardUseCase {
     const upcomingAppointmentsCount = await appointmentRepository.countDocuments({
       doctorId,
       date: { $gte: today },
-      status: 'Booked'
+      status: { $in: ['Booked', 'Accepted'] }
     });
 
     const recentAppointments = await appointmentRepository.find({ doctorId }, {

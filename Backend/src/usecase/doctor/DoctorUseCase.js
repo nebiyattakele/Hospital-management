@@ -20,7 +20,10 @@ class DoctorUseCase {
     user.email = updateData.email || user.email;
     user.specialty = updateData.specialty || user.specialty;
     user.contactNumber = updateData.contactNumber || user.contactNumber;
-    user.availability = updateData.availability || user.availability;
+    if (Array.isArray(updateData.availability)) {
+      user.availability = updateData.availability;
+      user.markModified('availability');
+    }
 
     if (updateData.password) {
       user.password = updateData.password;

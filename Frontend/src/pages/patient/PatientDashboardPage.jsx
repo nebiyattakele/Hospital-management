@@ -37,7 +37,7 @@ function PatientDashboardPage() {
         <ul>
           <li>{formatDateDisplay(latestAppointment?.date)}</li>
           <li>{formatTimeDisplay(latestAppointment?.time)}</li>
-          <li>{latestAppointment?.location || "Clinic location will be shared soon"}</li>
+          {/* <li>{latestAppointment?.location || "Clinic location will be shared soon"}</li> */}
         </ul>
       </section>
 

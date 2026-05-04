@@ -8,21 +8,18 @@ const protect = async (req, res, next) => {
       token = req.headers.authorization.split(' ')[1];
       const decoded = jwtService.verifyAccessToken(token);
 
-      
       if (!decoded) {
         return res.status(401).json({ message: 'Not authorized, token failed' });
       }
 
       req.user = await userRepository.findById(decoded.id);
-      next();
+      return next();
     } catch (error) {
-      res.status(401).json({ message: 'Not authorized, token failed' });
+      return res.status(401).json({ message: 'Not authorized, token failed' });
     }
   }
 
-  if (!token) {
-    res.status(401).json({ message: 'Not authorized, no token' });
-  }
+  return res.status(401).json({ message: 'Not authorized, no token' });
 };
 
 

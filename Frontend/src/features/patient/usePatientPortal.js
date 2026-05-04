@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import {
   bookAppointment,
   cancelAppointment,
+  getAppointmentAvailableSlots,
   getDoctorDetails,
   getDoctors,
   getMyAppointments,
@@ -134,8 +135,21 @@ function usePatientPortal({ doctorId } = {}) {
   const [showBookingModal, setShowBookingModal] = useState(false);
   const [bookingForm, setBookingForm] = useState({
     date: new Date().toISOString().slice(0, 10),
-    time: "09:00",
+    time: "",
   });
+  const [bookingSlotsMeta, setBookingSlotsMeta] = useState({
+    loading: false,
+    slots: [],
+    configuredForDay: true,
+    error: "",
+  });
+  const [rescheduleSlotsMeta, setRescheduleSlotsMeta] = useState({
+    loading: false,
+    slots: [],
+    configuredForDay: true,
+    error: "",
+  });
+  const [rescheduleDoctorId, setRescheduleDoctorId] = useState(null);
   const [showRescheduleModal, setShowRescheduleModal] = useState(false);
   const [rescheduleTargetId, setRescheduleTargetId] = useState(null);
   const [rescheduleForm, setRescheduleForm] = useState({
@@ -235,6 +249,123 @@ function usePatientPortal({ doctorId } = {}) {
   }, [doctorFilter]);
 
   useEffect(() => {
+    if (!showBookingModal) {
+      return;
+    }
+
+    const docId = resolveEntityId(selectedDoctor);
+    const date = bookingForm.date;
+    if (!docId || !date) {
+      setBookingSlotsMeta({
+        loading: false,
+        slots: [],
+        configuredForDay: true,
+        error: "",
+      });
+      return;
+    }
+
+    let cancelled = false;
+    setBookingSlotsMeta((prev) => ({ ...prev, loading: true, error: "" }));
+
+    (async () => {
+      try {
+        const raw = await getAppointmentAvailableSlots(docId, date);
+        const payload = unwrapApiPayload(raw);
+        const slots = Array.isArray(payload?.slots) ? payload.slots : [];
+        const configuredForDay = payload?.configuredForDay !== false;
+        if (cancelled) {
+          return;
+        }
+        setBookingSlotsMeta({ loading: false, slots, configuredForDay, error: "" });
+        setBookingForm((prev) => {
+          if (slots.length && !slots.includes(prev.time)) {
+            return { ...prev, time: slots[0] };
+          }
+          if (!slots.length) {
+            return { ...prev, time: "" };
+          }
+          return prev;
+        });
+      } catch (slotError) {
+        if (cancelled) {
+          return;
+        }
+        setBookingSlotsMeta({
+          loading: false,
+          slots: [],
+          configuredForDay: true,
+          error: slotError.message || "Failed to load time slots.",
+        });
+        setBookingForm((prev) => ({ ...prev, time: "" }));
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [showBookingModal, selectedDoctor, bookingForm.date]);
+
+  useEffect(() => {
+    if (!showRescheduleModal) {
+      return;
+    }
+
+    const docId = rescheduleDoctorId;
+    const date = rescheduleForm.date;
+    const excludeId = rescheduleTargetId;
+    if (!docId || !date || !excludeId) {
+      setRescheduleSlotsMeta({
+        loading: false,
+        slots: [],
+        configuredForDay: true,
+        error: "",
+      });
+      return;
+    }
+
+    let cancelled = false;
+    setRescheduleSlotsMeta((prev) => ({ ...prev, loading: true, error: "" }));
+
+    (async () => {
+      try {
+        const raw = await getAppointmentAvailableSlots(docId, date, excludeId);
+        const payload = unwrapApiPayload(raw);
+        const slots = Array.isArray(payload?.slots) ? payload.slots : [];
+        const configuredForDay = payload?.configuredForDay !== false;
+        if (cancelled) {
+          return;
+        }
+        setRescheduleSlotsMeta({ loading: false, slots, configuredForDay, error: "" });
+        setRescheduleForm((prev) => {
+          if (slots.length && !slots.includes(prev.time)) {
+            return { ...prev, time: slots[0] };
+          }
+          if (!slots.length) {
+            return { ...prev, time: "" };
+          }
+          return prev;
+        });
+      } catch (slotError) {
+        if (cancelled) {
+          return;
+        }
+        setRescheduleSlotsMeta({
+          loading: false,
+          slots: [],
+          configuredForDay: true,
+          error: slotError.message || "Failed to load time slots.",
+        });
+        setRescheduleForm((prev) => ({ ...prev, time: "" }));
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [showRescheduleModal, rescheduleDoctorId, rescheduleForm.date, rescheduleTargetId]);
+
+  useEffect(() => {
     if (!doctorId) {
       setSelectedDoctor(doctors[0] || null);
       return;
@@ -265,9 +396,10 @@ function usePatientPortal({ doctorId } = {}) {
     const appointmentId = resolveEntityId(appointment);
     if (!appointmentId) return;
     setRescheduleTargetId(appointmentId);
+    setRescheduleDoctorId(resolveEntityId(appointment?.doctorId) || null);
     setRescheduleForm({
-      date: appointment.date || new Date().toISOString().slice(0, 10),
-      time: appointment.time || "10:00",
+      date: getAppointmentDateKey(appointment) || new Date().toISOString().slice(0, 10),
+      time: appointment.time ? String(appointment.time).trim() : "",
     });
     setShowRescheduleModal(true);
   };
@@ -275,6 +407,10 @@ function usePatientPortal({ doctorId } = {}) {
   const handleBookAppointment = async () => {
     const selectedDoctorId = resolveEntityId(selectedDoctor);
     if (!selectedDoctorId) return false;
+    if (!bookingForm.date || !bookingForm.time) {
+      setError("Please select a date and an available time slot.");
+      return false;
+    }
     try {
       await bookAppointment({
         doctorId: selectedDoctorId,
@@ -304,6 +440,10 @@ function usePatientPortal({ doctorId } = {}) {
 
   const handleRescheduleAppointment = async () => {
     if (!rescheduleTargetId) return;
+    if (!rescheduleForm.date || !rescheduleForm.time) {
+      setError("Please select a date and an available time slot.");
+      return;
+    }
     try {
       await rescheduleAppointment(rescheduleTargetId, {
         date: rescheduleForm.date,
@@ -345,6 +485,7 @@ function usePatientPortal({ doctorId } = {}) {
     appointments,
     appointmentFilter,
     bookingForm,
+    bookingSlotsMeta,
     dashboardData,
     doctorFilter,
     doctors,
@@ -373,6 +514,7 @@ function usePatientPortal({ doctorId } = {}) {
     profile,
     records,
     rescheduleForm,
+    rescheduleSlotsMeta,
     selectedDoctor,
     setAppointmentFilter,
     setBookingForm,

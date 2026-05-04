@@ -5,6 +5,25 @@ const notificationRepository = require('../repository/NotificationRepository');
 // @desc    Book an appointment
 // @route   POST /api/appointments
 // @access  Private
+// @desc    Get available time slots for a doctor on a calendar date
+// @route   GET /api/appointments/slots (alias: /api/appointments/available-slots)
+// @access  Private / Patient
+const getAvailableSlots = async (req, res) => {
+  try {
+    const { doctorId, date, excludeAppointmentId } = req.query;
+    if (!doctorId || !date) {
+      return res.status(400).json({ message: 'doctorId and date query parameters are required' });
+    }
+
+    const slots = await appointmentUseCase.getAvailableSlotsForDoctor(doctorId, date, {
+      excludeAppointmentId: excludeAppointmentId || undefined
+    });
+    res.json(slots);
+  } catch (error) {
+    res.status(400).json({ message: error.message });
+  }
+};
+
 const bookAppointment = async (req, res) => {
   try {
     const appointmentData = {
@@ -114,6 +133,7 @@ const rescheduleAppointment = async (req, res) => {
 
 
 module.exports = {
+  getAvailableSlots,
   bookAppointment,
   getAppointments,
   cancelAppointment,

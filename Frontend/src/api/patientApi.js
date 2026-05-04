@@ -25,6 +25,17 @@ function bookAppointment(payload) {
   return apiClient.post("/appointments", payload);
 }
 
+function getAppointmentAvailableSlots(doctorId, date, excludeAppointmentId) {
+  const params = new URLSearchParams({
+    doctorId,
+    date,
+  });
+  if (excludeAppointmentId) {
+    params.set("excludeAppointmentId", excludeAppointmentId);
+  }
+  return apiClient.get(`/appointments/slots?${params.toString()}`);
+}
+
 function getMyAppointments() {
   return apiClient.get("/appointments");
 }
@@ -55,6 +66,7 @@ function resetPassword(email, newPassword) {
 
 export {
   bookAppointment,
+  getAppointmentAvailableSlots,
   cancelAppointment,
   forgotPassword,
   getDoctorDetails,

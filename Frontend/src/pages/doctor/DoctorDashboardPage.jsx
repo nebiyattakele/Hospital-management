@@ -24,11 +24,11 @@ function DoctorDashboardPage() {
       <>
         <article className="doctor-briefing">
           <div>
-            <h3>Daily Clinical Briefing</h3>
-            <p>Live dashboard data from backend API</p>
+            <h3>Welcome back, {profileForm.name}</h3>
+            <p>Daily Clinical Briefing</p>
           </div>
           <div className="briefing-meta">
-            <span>Status: {isLoading ? "Refreshing..." : "Synced"}</span>
+            {/* <span>Status: {isLoading ? "Refreshing..." : "Synced"}</span> */}
           </div>
         </article>
 
@@ -53,7 +53,7 @@ function DoctorDashboardPage() {
           <article className="white-panel">
             <div className="doctor-panel-head">
               <h3>Recent Appointments</h3>
-              <button type="button">View all schedule</button>
+              {/* <button type="button">View all schedule</button> */}
             </div>
             <table>
               <thead>
@@ -62,7 +62,7 @@ function DoctorDashboardPage() {
                   <th>Patient</th>
                   <th>Email</th>
                   <th>Status</th>
-                  <th>Action</th>
+                  {/* <th>Action</th> */}
                 </tr>
               </thead>
               <tbody>
@@ -78,11 +78,11 @@ function DoctorDashboardPage() {
                         {item.status}
                       </span>
                     </td>
-                    <td>
+                    {/* <td>
                       <button className="action-outline" type="button">
                         Open
                       </button>
-                    </td>
+                    </td> */}
                   </tr>
                 ))}
                 {!recentAppointments.length ? (
@@ -108,10 +108,10 @@ function DoctorDashboardPage() {
               ) : null}
             </article>
 
-            <article className="doctor-research-card">
+            {/* <article className="doctor-research-card">
               <h3>New Research Protocol</h3>
               <p>Department update for Q4 surgery guidelines.</p>
-            </article>
+            </article> */}
           </div>
         </section>
       </>

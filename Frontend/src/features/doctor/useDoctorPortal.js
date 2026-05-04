@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   getDoctorAppointments,
   getDoctorDashboardStats,
@@ -22,6 +22,103 @@ export const STATUS_TO_STYLE = {
 };
 
 export const FILTERS = ["all", "today", "upcoming"];
+
+export const PROFILE_WEEK_DAYS = [
+  "Monday",
+  "Tuesday",
+  "Wednesday",
+  "Thursday",
+  "Friday",
+  "Saturday",
+  "Sunday",
+];
+
+function normalizeProfileDay(input) {
+  const s = String(input || "").trim().toLowerCase();
+  if (!s) {
+    return "";
+  }
+  for (const label of PROFILE_WEEK_DAYS) {
+    const l = label.toLowerCase();
+    if (l === s || l.startsWith(s) || s.startsWith(l.slice(0, 3))) {
+      return label;
+    }
+  }
+  return "";
+}
+
+/** Matches backend BOOKING_SLOT_STEP_MINUTES — patients pick slots on this grid. */
+export const DOCTOR_AVAILABILITY_STEP_MINUTES = 30;
+
+function emptyWeeklyRangesDraft() {
+  return Object.fromEntries(PROFILE_WEEK_DAYS.map((d) => [d, []]));
+}
+
+function normalizeRangeClock(value) {
+  const m = /^(\d{1,2}):(\d{2})/.exec(String(value || "").trim());
+  if (!m) return "";
+  const hour = Math.min(23, Math.max(0, parseInt(m[1], 10)));
+  const minute = Math.min(59, Math.max(0, parseInt(m[2], 10)));
+  return `${String(hour).padStart(2, "0")}:${String(minute).padStart(2, "0")}`;
+}
+
+function parseMinutesClock(clock) {
+  const normalized = normalizeRangeClock(clock);
+  if (!normalized) return null;
+  const [h, min] = normalized.split(":").map(Number);
+  return h * 60 + min;
+}
+
+function rangesDraftFromAvailability(availability) {
+  const draft = emptyWeeklyRangesDraft();
+  for (const entry of Array.isArray(availability) ? availability : []) {
+    const label = normalizeProfileDay(entry?.day);
+    if (!label) continue;
+    if (Array.isArray(entry.ranges) && entry.ranges.length) {
+      draft[label] = entry.ranges.map((r) => ({
+        start: normalizeRangeClock(r?.start),
+        end: normalizeRangeClock(r?.end),
+      }));
+    }
+  }
+  return draft;
+}
+
+function buildAvailabilityFromRangeDraft(draft, prevAvailability) {
+  const prevByDay = {};
+  for (const entry of Array.isArray(prevAvailability) ? prevAvailability : []) {
+    const label = normalizeProfileDay(entry?.day);
+    if (label) prevByDay[label] = entry;
+  }
+
+  const result = [];
+  for (const day of PROFILE_WEEK_DAYS) {
+    const ranges = (draft[day] || [])
+      .map((r) => ({
+        start: normalizeRangeClock(r?.start),
+        end: normalizeRangeClock(r?.end),
+      }))
+      .filter((r) => {
+        if (!r.start || !r.end) return false;
+        const sm = parseMinutesClock(r.start);
+        const em = parseMinutesClock(r.end);
+        return sm != null && em != null && em > sm;
+      });
+
+    if (ranges.length) {
+      result.push({ day, ranges });
+      continue;
+    }
+
+    const prev = prevByDay[day];
+    const legacySlots = prev?.slots;
+    const hadStoredRanges = Array.isArray(prev?.ranges) && prev.ranges.length > 0;
+    if (Array.isArray(legacySlots) && legacySlots.length && !hadStoredRanges) {
+      result.push({ day, slots: legacySlots });
+    }
+  }
+  return result;
+}
 
 function getLocalDateKey(d = new Date()) {
   const y = d.getFullYear();
@@ -87,6 +184,8 @@ export const getPatientName = (item) =>
 export const getPatientEmail = (item) =>
   item?.patientId?.email || item?.patient?.email || item?.email || "-";
 
+const APPOINTMENTS_PAGE_SIZE = 5;
+
 function useDoctorPortal() {
   const [showEditProfile, setShowEditProfile] = useState(false);
   const [showChangePassword, setShowChangePassword] = useState(false);
@@ -108,6 +207,7 @@ function useDoctorPortal() {
     contactNumber: "",
     availability: [],
   });
+  const [weeklyRangeDraft, setWeeklyRangeDraft] = useState(emptyWeeklyRangesDraft);
   const [passwordForm, setPasswordForm] = useState({
     currentPassword: "",
     newPassword: "",
@@ -124,20 +224,26 @@ function useDoctorPortal() {
     [activeFilter, fetchedAppointments]
   );
 
-  const pageSize = 5;
-  const totalPages = Math.max(1, Math.ceil(appointments.length / pageSize));
+  const totalPages = Math.max(1, Math.ceil(appointments.length / APPOINTMENTS_PAGE_SIZE));
   const paginatedAppointments = useMemo(() => {
-    const start = (currentPage - 1) * pageSize;
-    return appointments.slice(start, start + pageSize);
+    const start = (currentPage - 1) * APPOINTMENTS_PAGE_SIZE;
+    return appointments.slice(start, start + APPOINTMENTS_PAGE_SIZE);
   }, [appointments, currentPage]);
 
-  const goToPreviousPage = () => {
-    setCurrentPage((prev) => Math.max(1, prev - 1));
-  };
+  const appointmentsRef = useRef(appointments);
+  appointmentsRef.current = appointments;
 
-  const goToNextPage = () => {
-    setCurrentPage((prev) => Math.min(totalPages, prev + 1));
-  };
+  const goToPreviousPage = useCallback(() => {
+    setCurrentPage((prev) => Math.max(1, prev - 1));
+  }, []);
+
+  const goToNextPage = useCallback(() => {
+    setCurrentPage((prev) => {
+      const len = appointmentsRef.current.length;
+      const pages = Math.max(1, Math.ceil(len / APPOINTMENTS_PAGE_SIZE));
+      return Math.min(pages, prev + 1);
+    });
+  }, []);
 
   const loadDoctorData = useCallback(async () => {
     setDataError("");
@@ -169,12 +275,14 @@ function useDoctorPortal() {
       setNotifications(
         toArray(alertsPayload?.notifications || alertsPayload?.items || alertsPayload)
       );
+      const availability = profilePayload?.availability || [];
       setProfileForm({
         name: profilePayload?.name || "",
         specialty: profilePayload?.specialty || "",
         contactNumber: profilePayload?.contactNumber || "",
-        availability: profilePayload?.availability || [],
+        availability,
       });
+      setWeeklyRangeDraft(rangesDraftFromAvailability(availability));
     } catch (error) {
       setDataError(error.message || "Failed to load doctor dashboard data.");
     } finally {
@@ -188,25 +296,49 @@ function useDoctorPortal() {
 
   useEffect(() => {
     setCurrentPage(1);
-  }, [activeFilter, fetchedAppointments.length]);
+  }, [activeFilter]);
 
   useEffect(() => {
     setCurrentPage((prev) => Math.min(prev, totalPages));
   }, [totalPages]);
 
+  const addWeeklyPeriod = (dayLabel) => {
+    setWeeklyRangeDraft((prev) => ({
+      ...prev,
+      [dayLabel]: [...(prev[dayLabel] || []), { start: "", end: "" }],
+    }));
+  };
+
+  const removeWeeklyPeriod = (dayLabel, index) => {
+    setWeeklyRangeDraft((prev) => ({
+      ...prev,
+      [dayLabel]: (prev[dayLabel] || []).filter((_, i) => i !== index),
+    }));
+  };
+
+  const updateWeeklyPeriod = (dayLabel, index, field, value) => {
+    setWeeklyRangeDraft((prev) => {
+      const rows = [...(prev[dayLabel] || [])];
+      rows[index] = { ...rows[index], [field]: value };
+      return { ...prev, [dayLabel]: rows };
+    });
+  };
+
   const handleProfileSubmit = async (event) => {
     event.preventDefault();
     setFormError("");
     try {
+      const availability = buildAvailabilityFromRangeDraft(weeklyRangeDraft, profileForm.availability);
       const payload = {
         name: profileForm.name,
         specialty: profileForm.specialty,
         contactNumber: profileForm.contactNumber,
-        availability: profileForm.availability,
+        availability,
       };
       await updateDoctorProfile(payload);
       setMessage("Profile updated successfully.");
       setShowEditProfile(false);
+      await loadDoctorData();
     } catch (error) {
       setFormError(error.message || "Failed to update profile.");
     }
@@ -292,6 +424,11 @@ function useDoctorPortal() {
     showChangePassword,
     showEditProfile,
     totalPages,
+    weeklyRangeDraft,
+    setWeeklyRangeDraft,
+    addWeeklyPeriod,
+    removeWeeklyPeriod,
+    updateWeeklyPeriod,
   };
 }
 

@@ -7,8 +7,8 @@ function PatientDoctorDetailsPage() {
   const navigate = useNavigate();
   const {
     bookingForm,
+    bookingSlotsMeta,
     error,
-    formatAvailability,
     isLoading,
     message,
     notifications,
@@ -53,8 +53,8 @@ function PatientDoctorDetailsPage() {
             <span>Email: {selectedDoctor?.email || "-"}</span>
             <span>Contact: {selectedDoctor?.contactNumber || "-"}</span>
             <span>Specialty: {selectedDoctor?.specialty || "-"}</span>
-            <span>Rating: {selectedDoctor?.rating ?? 0}</span>
-            <span>Availability: {formatAvailability(selectedDoctor?.availability)}</span>
+            {/* <span>Rating: {selectedDoctor?.rating ?? 0}</span> */}
+            {/* <span>Availability: {formatAvailability(selectedDoctor?.availability)}</span> */}
           </div>
         </article>
 
@@ -79,17 +79,43 @@ function PatientDoctorDetailsPage() {
                     value={bookingForm.date}
                   />
                 </label>
-                <label>
-                  Time
-                  <input
-                    onChange={(event) =>
-                      setBookingForm((prev) => ({ ...prev, time: event.target.value }))
-                    }
-                    required
-                    type="time"
-                    value={bookingForm.time}
-                  />
-                </label>
+                <div>
+                  <label>
+                    Available time slots
+                    {bookingSlotsMeta.loading ? (
+                      <span className="subtle-text"> — Loading…</span>
+                    ) : null}
+                  </label>
+                  {bookingSlotsMeta.error ? (
+                    <p className="error-text">{bookingSlotsMeta.error}</p>
+                  ) : null}
+                  {!bookingSlotsMeta.loading &&
+                  !bookingSlotsMeta.configuredForDay &&
+                  !bookingSlotsMeta.error ? (
+                    <p className="subtle-text">
+                      This doctor has not set working hours for this weekday. Choose another date
+                      or contact the clinic.
+                    </p>
+                  ) : null}
+                  {!bookingSlotsMeta.loading &&
+                  bookingSlotsMeta.configuredForDay &&
+                  !bookingSlotsMeta.slots.length &&
+                  !bookingSlotsMeta.error ? (
+                    <p className="subtle-text">No open slots on this date. Try another day.</p>
+                  ) : null}
+                  <div className="slot-grid">
+                    {bookingSlotsMeta.slots.map((slot) => (
+                      <button
+                        className={bookingForm.time === slot ? "active" : ""}
+                        key={slot}
+                        onClick={() => setBookingForm((prev) => ({ ...prev, time: slot }))}
+                        type="button"
+                      >
+                        {slot}
+                      </button>
+                    ))}
+                  </div>
+                </div>
                 <div className="button-row">
                   <button
                     className="btn-secondary"
@@ -98,7 +124,15 @@ function PatientDoctorDetailsPage() {
                   >
                     Cancel
                   </button>
-                  <button className="btn-primary" type="submit">
+                  <button
+                    className="btn-primary"
+                    disabled={
+                      bookingSlotsMeta.loading ||
+                      !bookingForm.time ||
+                      !bookingSlotsMeta.slots.includes(bookingForm.time)
+                    }
+                    type="submit"
+                  >
                     Confirm Booking
                   </button>
                 </div>

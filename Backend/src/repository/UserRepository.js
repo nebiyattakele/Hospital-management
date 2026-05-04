@@ -1,4 +1,4 @@
-const User = require('../domain/User');
+const User = require('../domain/user');
 
 class UserRepository {
   async findByEmail(email) {
